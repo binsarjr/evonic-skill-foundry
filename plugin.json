@@ -1,0 +1,29 @@
+{
+  "id": "skill_foundry",
+  "name": "Skill Foundry",
+  "version": "1.0.0",
+  "description": "Distills reusable procedures from conversations into native Evonic skills with optional approval, enablement, and source-agent assignment.",
+  "brief": "Review conversations and generate reusable native Evonic knowledge skills.",
+  "author": "Binsar",
+  "license": "MIT",
+  "enabled": false,
+  "nav_label": "Skill Foundry",
+  "nav_route": "/skill-foundry",
+  "events": ["turn_complete"],
+  "variables": [
+    {"name":"AUTO_REVIEW_ENABLED","label":"Auto Review","type":"boolean","default":false,"description":"Review eligible opted-in agent conversations after completed turns."},
+    {"name":"REQUIRE_APPROVAL","label":"Require Approval","type":"boolean","default":true,"description":"Keep candidates pending until an authenticated user approves them."},
+    {"name":"AUTO_ENABLE_GENERATED_SKILLS","label":"Auto-enable Generated Skills","type":"boolean","default":false,"description":"Enable a generated skill globally after successful materialization."},
+    {"name":"AUTO_ASSIGN_GENERATED_SKILLS","label":"Auto-assign to Source Agent","type":"boolean","default":false,"description":"Assign a generated skill to its source agent. Requires auto-enable."},
+    {"name":"MIN_USER_TURNS","label":"Minimum User Turns","type":"number","default":5,"description":"Minimum user messages before a session is eligible for review."},
+    {"name":"REVIEW_EVERY_USER_TURNS","label":"Review Every User Turns","type":"number","default":5,"description":"Minimum additional user messages between reviews."},
+    {"name":"REVIEW_COOLDOWN_SECONDS","label":"Review Cooldown (seconds)","type":"number","default":300,"description":"Minimum time between reviews for one session."},
+    {"name":"TRANSCRIPT_MESSAGE_LIMIT","label":"Transcript Message Limit","type":"number","default":100,"description":"Maximum recent messages sent to the reviewer."},
+    {"name":"REVIEW_MODEL_ID","label":"Reviewer Model ID","type":"string","default":"","description":"Optional Evonic model ID. Empty uses the source agent model, then the default model."},
+    {"name":"MAX_REVIEW_TOKENS","label":"Maximum Review Tokens","type":"number","default":4096,"description":"Maximum output tokens for one review."},
+    {"name":"MAX_RETRIES","label":"Review Retries","type":"number","default":2,"description":"Maximum internal LLM retries."}
+  ],
+  "agent_settings": [
+    {"name":"enabled","label":"Skill Foundry Auto-review","type":"boolean","default":false,"description":"Opt this agent into automatic conversation review."}
+  ]
+}
