@@ -113,7 +113,11 @@ def parse_result(value):
     value = dict(value)
     value["reason"] = str(value.get("reason") or "").strip()
     if not value["reason"]:
-        raise ValueError("reviewer reason is required")
+        value["reason"] = (
+            "no durable reusable procedure identified"
+            if action == "none"
+            else f"reviewer proposed a skill {action}"
+        )
     if action == "update" and not str(value.get("skill_id") or "").strip():
         raise ValueError("skill_id is required for update")
     return value

@@ -112,6 +112,10 @@ class ValidationAndReviewerTests(unittest.TestCase):
             ],
             "none",
         )
+        self.assertEqual(
+            reviewer.parse_result({"action": "none"})["reason"],
+            "no durable reusable procedure identified",
+        )
 
 
 if __name__ == "__main__":
