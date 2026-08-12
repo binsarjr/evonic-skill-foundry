@@ -1,3 +1,5 @@
+import sys
+import types
 import unittest
 from unittest.mock import Mock, patch
 
@@ -5,9 +7,21 @@ from _package import load
 
 
 service = load("service")
+handler = load("handler")
 
 
 class PolicyTests(unittest.TestCase):
+    def test_agent_setting_defaults_enabled_without_plugin_manager(self):
+        fake_db = Mock()
+        fake_db.get_setting.side_effect = [None, "0"]
+        models = types.ModuleType("models")
+        db_module = types.ModuleType("models.db")
+        db_module.db = fake_db
+        models.db = db_module
+        with patch.dict(sys.modules, {"models": models, "models.db": db_module}):
+            self.assertTrue(handler._agent_enabled("new-agent"))
+            self.assertFalse(handler._agent_enabled("opted-out-agent"))
+
     def test_auto_assign_requires_enable(self):
         self.assertTrue(service.config_errors({"AUTO_ASSIGN_GENERATED_SKILLS": True}))
         self.assertFalse(

@@ -9,10 +9,10 @@ _executor = None
 
 
 def _agent_enabled(agent_id):
-    from backend.plugin_manager import plugin_manager
+    from models.db import db
 
-    settings = plugin_manager.get_agent_plugin_settings("skill_foundry", agent_id)
-    return bool(settings.get("enabled", True))
+    stored = db.get_setting(f"plugin_agent_setting:skill_foundry:{agent_id}:enabled")
+    return stored is None or stored in ("1", "true", "True")
 
 
 def _sync_agent_tool(agent_id, enabled):
