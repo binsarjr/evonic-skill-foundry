@@ -53,6 +53,29 @@ def _fingerprint(messages):
     return hashlib.sha256(serialized.encode()).hexdigest()
 
 
+def _request_review(client, messages, skills, config):
+    request = {
+        "messages": [
+            {"role": "system", "content": SYSTEM},
+            {
+                "role": "user",
+                "content": transcript_prompt(messages, skills),
+            },
+        ],
+        "tools": [SUBMIT_TOOL],
+        "temperature": 0.2,
+        "enable_thinking": False,
+        "max_tokens": max(512, int(config.get("MAX_REVIEW_TOKENS", 4096))),
+    }
+    result = client.chat_completion(
+        **request, tool_choice="submit_skill_review"
+    )
+    error = str(result.get("error_detail") or result.get("error_type") or "")
+    if not result.get("success") and "tool_choice" in error.lower().replace(" ", "_"):
+        result = client.chat_completion(**request)
+    return result
+
+
 def _prepare_data(data, agent_id):
     prepared = dict(data)
     for key in ("skill_id", "slug", "title", "description", "brief", "system_md", "reason"):
@@ -106,21 +129,11 @@ def review(agent_id, session_id, messages, config, force=False, actor="skill-fou
         return None
     repo.set_job(job_id, "running")
     try:
-        result = _client(agent_id, config).chat_completion(
-            messages=[
-                {"role": "system", "content": SYSTEM},
-                {
-                    "role": "user",
-                    "content": transcript_prompt(
-                        messages, list_owned(agent_id, include_content=True)
-                    ),
-                },
-            ],
-            tools=[SUBMIT_TOOL],
-            tool_choice="submit_skill_review",
-            temperature=0.2,
-            enable_thinking=False,
-            max_tokens=max(512, int(config.get("MAX_REVIEW_TOKENS", 4096))),
+        result = _request_review(
+            _client(agent_id, config),
+            messages,
+            list_owned(agent_id, include_content=True),
+            config,
         )
         if not result.get("success"):
             raise RuntimeError(

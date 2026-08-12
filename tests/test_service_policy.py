@@ -11,6 +11,23 @@ handler = load("handler")
 
 
 class PolicyTests(unittest.TestCase):
+    def test_reviewer_retries_unsupported_forced_tool_choice(self):
+        client = Mock()
+        client.chat_completion.side_effect = [
+            {
+                "success": False,
+                "error_detail": "Thinking mode does not support this tool_choice",
+            },
+            {"success": True, "response": {"choices": []}},
+        ]
+        result = service._request_review(client, [], [], {})
+        self.assertTrue(result["success"])
+        self.assertEqual(
+            client.chat_completion.call_args_list[0].kwargs["tool_choice"],
+            "submit_skill_review",
+        )
+        self.assertNotIn("tool_choice", client.chat_completion.call_args_list[1].kwargs)
+
     def test_agent_setting_defaults_enabled_without_plugin_manager(self):
         fake_db = Mock()
         fake_db.get_setting.side_effect = [None, "0"]
