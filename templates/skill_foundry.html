@@ -1,13 +1,51 @@
 {% extends "base.html" %}
 {% block title %}Skill Foundry{% endblock %}
 {% block content %}
-<div class="container py-4"><div class="d-flex justify-content-between align-items-center mb-3"><div><h1>Skill Foundry</h1><p class="text-muted">Reusable procedures distilled from conversations.</p></div><a class="btn btn-outline-secondary" href="/plugins/skill_foundry">Plugin settings</a></div><div id="notice"></div><div class="card"><div class="card-body"><h5>Candidates</h5><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Title</th><th>Agent</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead><tbody id="rows"></tbody></table></div></div></div><div class="modal fade" id="detail" tabindex="-1"><div class="modal-dialog modal-xl"><div class="modal-content"><div class="modal-header"><h5 id="detailTitle" class="modal-title"></h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><p id="detailDescription"></p><h6>Generated SYSTEM.md</h6><pre id="detailSystem" class="bg-dark text-light p-3 rounded" style="white-space:pre-wrap"></pre><h6>Risk findings</h6><pre id="detailRisks"></pre></div></div></div></div></div>
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h1>Skill Foundry</h1>
+      <p class="text-muted">Procedural self-improvement from tool-heavy conversations.</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="/plugins/skill_foundry">Plugin settings</a>
+  </div>
+
+  <div id="notice"></div>
+  <div id="summary" class="row g-3 mb-3"></div>
+
+  <div class="card">
+    <div class="card-body">
+      <h5>Candidates and changes</h5>
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead><tr><th>Title</th><th>Action</th><th>Agent</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="detail" tabindex="-1">
+    <div class="modal-dialog modal-xl"><div class="modal-content">
+      <div class="modal-header"><h5 id="detailTitle" class="modal-title"></h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <p id="detailDescription"></p>
+        <h6>Generated SYSTEM.md</h6>
+        <pre id="detailSystem" class="bg-dark text-light p-3 rounded" style="white-space:pre-wrap"></pre>
+        <h6>Risk findings</h6><pre id="detailRisks"></pre>
+      </div>
+    </div></div>
+  </div>
+</div>
 <script>
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const notice=document.getElementById('notice'),summary=document.getElementById('summary'),rows=document.getElementById('rows'),detailTitle=document.getElementById('detailTitle'),detailDescription=document.getElementById('detailDescription'),detailSystem=document.getElementById('detailSystem'),detailRisks=document.getElementById('detailRisks');
 async function api(url,opt={}){let r=await fetch(url,{headers:{'Content-Type':'application/json'},...opt});let d=await r.json();if(!r.ok)throw Error(d.error||r.statusText);return d}
+function card(label,value,detail){return `<div class="col-sm-6 col-lg-3"><div class="card h-100"><div class="card-body"><div class="text-muted small">${esc(label)}</div><div class="fs-4 fw-semibold">${esc(value)}</div><div class="small">${esc(detail)}</div></div></div></div>`}
 function buttons(c){let b=`<button class="btn btn-sm btn-outline-primary" onclick="view('${c.id}')">View</button> `;if(c.status==='pending_review')b+=`<button class="btn btn-sm btn-success" onclick="act('${c.id}','approve')">Approve</button> <button class="btn btn-sm btn-danger" onclick="act('${c.id}','reject')">Reject</button> `;if(['materialized','disabled'].includes(c.status))b+=`<button class="btn btn-sm btn-success" onclick="act('${c.id}','enable',{enabled:true})">Enable</button> `;if(['enabled','assigned'].includes(c.status))b+=`<button class="btn btn-sm btn-warning" onclick="act('${c.id}','enable',{enabled:false})">Disable</button> `;if(c.status==='enabled')b+=`<button class="btn btn-sm btn-info" onclick="act('${c.id}','assign',{assigned:true})">Assign</button>`;if(c.status==='assigned')b+=`<button class="btn btn-sm btn-outline-info" onclick="act('${c.id}','assign',{assigned:false})">Unassign</button>`;return b}
-async function load(){let s=await api('/api/skill-foundry/status');document.querySelector('#notice').innerHTML=s.config_errors.map(x=>`<div class="alert alert-danger">${esc(x)}</div>`).join('');let d=await api('/api/skill-foundry/candidates');document.querySelector('#rows').innerHTML=d.candidates.map(c=>`<tr><td><strong>${esc(c.title)}</strong><br><small>${esc(c.description)}</small></td><td>${esc(c.agent_id)}</td><td><span class="badge bg-secondary">${esc(c.status)}</span></td><td>${esc(c.created_at)}</td><td>${buttons(c)}</td></tr>`).join('')||'<tr><td colspan="5" class="text-muted">No candidates yet.</td></tr>'}
+async function load(){let s=await api('/api/skill-foundry/status');notice.innerHTML=s.config_errors.map(x=>`<div class="alert alert-danger">${esc(x)}</div>`).join('');let jobs=s.stats.jobs||{},candidates=s.stats.candidates||{};summary.innerHTML=card('Mode',s.automatic?'Automatic':'Manual',s.approval_required?'Approval required':'Direct materialization')+card('Trigger',s.threshold+' tool calls','Per session')+card('Agents',s.agents.enabled+' / '+s.agents.total,'Self-improvement enabled')+card('Generated skills',s.generated_skills,(jobs.failed||0)+' failed review(s)');let d=await api('/api/skill-foundry/candidates');rows.innerHTML=d.candidates.map(c=>`<tr><td><strong>${esc(c.title)}</strong><br><small>${esc(c.description)}</small></td><td><span class="badge bg-primary">${esc(c.action)}</span></td><td>${esc(c.agent_id)}</td><td><span class="badge bg-secondary">${esc(c.status)}</span></td><td>${esc(c.created_at)}</td><td>${buttons(c)}</td></tr>`).join('')||'<tr><td colspan="6" class="text-muted">No candidates yet.</td></tr>'}
 async function view(id){let c=(await api('/api/skill-foundry/candidates/'+id)).candidate;detailTitle.textContent=c.title;detailDescription.textContent=c.description;detailSystem.textContent=c.system_md;detailRisks.textContent=JSON.stringify(c.risks,null,2);bootstrap.Modal.getOrCreateInstance(detail).show()}
-async function act(id,a,data={}){if(a==='reject')data.reason=prompt('Rejection reason:')||'';if(a==='approve')data.reason='Approved in Skill Foundry dashboard';try{await api(`/api/skill-foundry/candidates/${id}/${a}`,{method:'POST',body:JSON.stringify(data)});await load()}catch(e){alert(e.message)}}load();
+async function act(id,a,data={}){if(a==='reject')data.reason=prompt('Rejection reason:')||'';if(a==='approve')data.reason='Approved in Skill Foundry dashboard';try{await api(`/api/skill-foundry/candidates/${id}/${a}`,{method:'POST',body:JSON.stringify(data)});await load()}catch(e){alert(e.message)}}
+load();
 </script>
 {% endblock %}

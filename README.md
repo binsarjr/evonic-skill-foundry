@@ -1,52 +1,46 @@
 # Skill Foundry for Evonic
 
-Skill Foundry reviews completed Evonic conversations asynchronously and turns reusable procedures into native, persistent Evonic knowledge skills. It supports optional approval, automatic global enablement, and automatic assignment to the source agent, all configured through Evonic's native plugin detail page.
+Skill Foundry gives Evonic procedural self-improvement: it reviews tool-heavy conversations after the response is delivered, creates reusable native skills, and improves matching skills it generated earlier. Agents can also explicitly inspect, create, and patch their own Foundry skills through `skill_foundry_manage`.
 
-## Safety defaults
+## Behavior
 
-- Plugin disabled after installation
-- Auto-review disabled
-- Per-agent auto-review opt-in disabled
-- Approval required
-- Auto-enable disabled
-- Auto-assignment disabled
-- Generated v1 skills contain only `skill.json` and `SYSTEM.md`, never executable code
-- Secret, prompt-injection, destructive-command, and privilege-escalation patterns are blocked
+- Reviews after 10 accumulated tool calls per session by default.
+- Prefers updating a matching Foundry skill over creating a duplicate.
+- Makes approved changes available to the source agent on its next turn.
+- Sends a short source-session notification after a background create or update.
+- Never modifies manually installed, core, or another agent's skills.
+- Does not persist conversation transcripts.
+- Blocks secret, prompt-injection, destructive-command, and privilege-escalation patterns.
 
-For Hermes-like next-turn availability, explicitly set:
-
-```text
-REQUIRE_APPROVAL=false
-AUTO_ENABLE_GENERATED_SKILLS=true
-AUTO_ASSIGN_GENERATED_SKILLS=true
-```
-
-Auto-assignment requires auto-enable. Invalid combinations are reported and generation is rejected.
+Automatic review, enablement, assignment, and per-agent participation default on once the plugin itself is enabled. Approval remains available as an optional operator setting.
 
 ## Installation
 
-1. Download `skill-foundry-v1.0.0.zip` from GitHub Releases.
-2. In Evonic, open Plugins and upload the ZIP.
-3. Enable Skill Foundry.
-4. Open its plugin detail page and configure global options.
-5. Open each desired agent's detail page and enable `Skill Foundry Auto-review`.
+1. Download `skill-foundry-v0.2.0.zip` from GitHub Releases.
+2. Upload it from Evonic's Plugins page and enable Skill Foundry.
+3. Open **Skill Foundry** in the sidebar to inspect activity and generated changes.
+4. Disable `Skill Foundry Self-improvement` on any agent that should opt out.
 
-Dashboard: `/skill-foundry`
+## Agent tool
+
+`skill_foundry_manage` supports:
+
+- `list` and `view` for skills owned by the calling agent;
+- `create` for a new procedure;
+- `patch` for one exact text replacement in an existing procedure.
+
+There is intentionally no delete action and no executable support-file generation.
 
 ## Lifecycle
 
 With approval enabled: `pending_review -> approved -> materialized -> enabled -> assigned`.
 
-With approval disabled, validation is followed immediately by materialization. Auto-enable and auto-assign then run according to settings. Native `SkillsManager` and `agent_skills` state are used, so an enabled and assigned generated skill is visible on the source agent's next turn.
-
-## Reviewer model
-
-`REVIEW_MODEL_ID` may name an existing Evonic model. If empty, Skill Foundry uses the source agent's model, then Evonic's default model. Transcript review stays inside Evonic's configured model infrastructure.
+With approval disabled, validated changes materialize immediately. Generated skills start at `0.1.0`; updates retain the same skill ID and increment the patch version.
 
 ## Development
 
 ```bash
-python -m pytest -q
+python -m unittest discover -s tests -v
 ```
 
 ## License

@@ -1,9 +1,92 @@
-import os, sys, unittest
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-import evonic_skill_foundry.service as service
+import unittest
+from unittest.mock import Mock, patch
+
+from _package import load
+
+
+service = load("service")
+
 
 class PolicyTests(unittest.TestCase):
     def test_auto_assign_requires_enable(self):
-        self.assertTrue(service.config_errors({'AUTO_ASSIGN_GENERATED_SKILLS':True}))
-        self.assertFalse(service.config_errors({'AUTO_ASSIGN_GENERATED_SKILLS':True,'AUTO_ENABLE_GENERATED_SKILLS':True}))
-if __name__=='__main__': unittest.main()
+        self.assertTrue(service.config_errors({"AUTO_ASSIGN_GENERATED_SKILLS": True}))
+        self.assertFalse(
+            service.config_errors(
+                {
+                    "AUTO_ASSIGN_GENERATED_SKILLS": True,
+                    "AUTO_ENABLE_GENERATED_SKILLS": True,
+                }
+            )
+        )
+
+    @patch.object(service, "find_owned_by_slug")
+    @patch.object(service, "view_owned")
+    def test_create_with_existing_slug_becomes_update(self, view_owned, find_owned):
+        find_owned.return_value = {"id": "generated-demo"}
+        view_owned.return_value = {
+            "id": "generated-demo",
+            "name": "Demo",
+            "description": "Description",
+            "brief": "Use when testing",
+            "provenance": {"slug": "demo"},
+        }
+        prepared = service._prepare_data(
+            {
+                "action": "create",
+                "slug": "demo",
+                "title": "Demo",
+                "description": "Description",
+                "brief": "Use when testing",
+                "system_md": "# Demo",
+            },
+            "agent",
+        )
+        self.assertEqual(prepared["action"], "update")
+        self.assertEqual(prepared["skill_id"], "generated-demo")
+
+    @patch.object(service, "repository")
+    @patch.object(service, "_store_candidate")
+    @patch.object(service, "view_owned")
+    def test_patch_requires_one_exact_match(self, view_owned, store_candidate, repository):
+        view_owned.return_value = {
+            "id": "generated-demo",
+            "name": "Demo",
+            "description": "Description",
+            "brief": "Use when testing",
+            "version": "0.1.0",
+            "provenance": {"slug": "demo"},
+            "system_md": "alpha beta",
+        }
+        store_candidate.return_value = {
+            "id": "candidate",
+            "action": "update",
+            "title": "Demo",
+            "status": "assigned",
+            "skill_id": "generated-demo",
+        }
+        fake_repo = Mock()
+        repository.return_value = fake_repo
+        service.patch_from_tool(
+            "agent",
+            "session",
+            {"skill_id": "generated-demo", "old_text": "alpha", "new_text": "gamma"},
+            {},
+            "agent:agent",
+        )
+        data = store_candidate.call_args.args[3]
+        self.assertEqual(data["system_md"], "gamma beta")
+        fake_repo.reset_tool_calls.assert_called_once_with("agent", "session")
+
+        view_owned.return_value["system_md"] = "alpha alpha"
+        with self.assertRaisesRegex(ValueError, "found 2"):
+            service.patch_from_tool(
+                "agent",
+                "session",
+                {"skill_id": "generated-demo", "old_text": "alpha", "new_text": "gamma"},
+                {},
+                "agent:agent",
+            )
+
+
+if __name__ == "__main__":
+    unittest.main()

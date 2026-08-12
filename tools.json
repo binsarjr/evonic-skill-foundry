@@ -1,0 +1,56 @@
+[
+  {
+    "type": "function",
+    "name": "Skill Foundry Manage",
+    "description": "Inspect, create, or patch self-generated procedural skills.",
+    "function": {
+      "name": "skill_foundry_manage",
+      "description": "Manage procedural skills owned by Skill Foundry for this agent. Use list/view before creating a skill. Create or patch after a reusable non-trivial workflow, a recurring correction, or an explicit user request to retain a procedure. Prefer patching a matching skill. Tell the user briefly when a create or patch succeeds.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["list", "view", "create", "patch"],
+            "description": "Operation to perform."
+          },
+          "skill_id": {
+            "type": "string",
+            "description": "Foundry skill ID for view or patch."
+          },
+          "slug": {
+            "type": "string",
+            "description": "Lowercase slug for create."
+          },
+          "title": {
+            "type": "string",
+            "description": "Human-readable title for create."
+          },
+          "description": {
+            "type": "string",
+            "description": "What the new skill teaches."
+          },
+          "brief": {
+            "type": "string",
+            "description": "Short 'Use when ...' discovery hint."
+          },
+          "system_md": {
+            "type": "string",
+            "description": "Complete standalone SYSTEM.md procedure for create."
+          },
+          "old_text": {
+            "type": "string",
+            "description": "Exact text that must occur once for patch."
+          },
+          "new_text": {
+            "type": "string",
+            "description": "Replacement text for patch."
+          }
+        },
+        "required": ["action"]
+      }
+    },
+    "mock_response": "{\"status\":\"ok\",\"action\":\"list\",\"skills\":[]}",
+    "mock_response_type": "json"
+  }
+]
